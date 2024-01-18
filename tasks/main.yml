@@ -33,7 +33,6 @@
             - name: Add Docker's official apt key for Ubuntu
               ansible.builtin.apt_key:
                 url: https://download.docker.com/linux/ubuntu/gpg
-                id: 9DC858229FC7DD38854AE2D88D81803C0EBFCD88
                 state: present
                 keyring: /etc/apt/keyrings/docker.gpg
               register: add_key
@@ -64,7 +63,6 @@
             - name: Add Docker's official apt key for Debian
               ansible.builtin.apt_key:
                 url: https://download.docker.com/linux/debian/gpg
-                id: 9DC858229FC7DD38854AE2D88D81803C0EBFCD88
                 state: present
                 keyring: /etc/apt/keyrings/docker.gpg
               register: add_key
