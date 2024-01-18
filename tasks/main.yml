@@ -1,0 +1,173 @@
+---
+
+- name: Perform specific setup for Ubuntu & Debian
+  when: ansible_distribution == 'Ubuntu' or ansible_distribution == 'Debian'
+  block:
+
+    - name: Install Docker dependencies
+      ansible.builtin.apt:
+        state: present
+        update_cache: true
+        install_recommends: false
+        pkg:
+          - apt-transport-https
+          - ca-certificates
+          - curl
+          - software-properties-common
+
+    - name: Setup repositories
+      block:
+
+        - name: Create dir for apt keyrings
+          ansible.builtin.file:
+            path: /etc/apt/keyrings
+            state: directory
+            mode: "0755"
+            owner: root
+            group: root
+
+        - name: Configure repositories for Ubuntu
+          when: ansible_distribution == 'Ubuntu'
+          block:
+
+            - name: Add Docker's official apt key for Ubuntu
+              ansible.builtin.apt_key:
+                url: https://download.docker.com/linux/ubuntu/gpg
+                state: present
+                keyring: /etc/apt/keyrings/docker.gpg
+              register: add_key
+              ignore_errors: true
+
+            - name: Download Docker's official apt key for Ubuntu (if previous task failed)
+              when: add_key.failed
+              ansible.builtin.get_url:
+                url: https://download.docker.com/linux/ubuntu/gpg
+                dest: /etc/apt/keyrings/docker.gpg
+                owner: root
+                group: root
+                mode: "0644"
+
+            - name: Configure repository for Ubuntu
+              ansible.builtin.copy:
+                content: |
+                  deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable
+                dest: /etc/apt/sources.list.d/docker.list
+                owner: root
+                group: root
+                mode: "0644"
+
+        - name: Configure repositories for Debian
+          when: ansible_distribution == 'Debian'
+          block:
+
+            - name: Add Docker's official apt key for Debian
+              ansible.builtin.apt_key:
+                url: https://download.docker.com/linux/debian/gpg
+                state: present
+                keyring: /etc/apt/keyrings/docker.gpg
+              register: add_key
+              ignore_errors: true
+
+            - name: Download Docker's official apt key for Debian (if previous task failed)
+              when: add_key.failed
+              ansible.builtin.get_url:
+                url: https://download.docker.com/linux/debian/gpg
+                dest: /etc/apt/keyrings/docker.gpg
+                owner: root
+                group: root
+                mode: "0644"
+
+            - name: Configure repository for Debian
+              ansible.builtin.copy:
+                content: |
+                  deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/debian {{ ansible_distribution_release }} stable
+                dest: /etc/apt/sources.list.d/docker.list
+                owner: root
+                group: root
+                mode: "0644"
+
+    - name: Install current Docker version
+      when: docker_version is not defined or docker_version | length == 0
+      block:
+
+        - name: Unpin Docker version in apt
+          ansible.builtin.file:
+            state: absent
+            path: "/etc/apt/preferences.d/docker.pref"
+
+        - name: Install current Docker version
+          ansible.builtin.apt:
+            state: present
+            allow_downgrade: true
+            update_cache: true
+            install_recommends: false
+            pkg:
+              - docker-ce
+              - docker-ce-cli
+          notify: Restart Docker
+
+    - name: Install specific Docker version
+      when:
+        - docker_version is defined
+        - docker_version | length > 0
+      block:
+
+        - name: Pin Docker version in apt
+          ansible.builtin.copy:
+            content: |
+              Explanation: Pinned by Ansible
+              Package: docker-ce*
+              Pin: version {{ docker_version }}
+              Pin-Priority: 1000
+            dest: "/etc/apt/preferences.d/docker.pref"
+            owner: root
+            group: root
+            mode: "0644"
+
+        - name: Install specific Docker version
+          ansible.builtin.apt:
+            state: present
+            allow_downgrade: true
+            update_cache: true
+            install_recommends: false
+            pkg:
+              - docker-ce={{ docker_version }}
+              - docker-ce-cli={{ docker_version }}
+          notify: Restart Docker
+
+    - name: Create config dir for docker
+      ansible.builtin.file:
+        path: /etc/docker
+        state: directory
+        mode: '0755'
+        owner: root
+        group: root
+
+    - name: Template a file to /etc/docker/daemon.json
+      ansible.builtin.copy:
+        content: |
+          {{ docker_daemon_options }}
+        dest: /etc/docker/daemon.json
+        owner: root
+        group: root
+        mode: "0644"
+      notify: Restart Docker
+
+    - name: Install Docker python module
+      when:
+        - docker_module is defined
+        - docker_module
+      block:
+
+        - name: Install pip3 system package
+          ansible.builtin.apt:
+            state: present
+            update_cache: true
+            install_recommends: false
+            pkg:
+              - python3-pip
+
+        - name: Install Docker Module for Python
+          ansible.builtin.pip:
+            name: docker
+            state: present
