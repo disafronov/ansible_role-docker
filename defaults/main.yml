@@ -1,4 +1,7 @@
 docker_daemon_options: |
   {
-    "log-driver": "journald"
+    "log-driver": "journald",
+    "log-opts": {
+      "tag": "{{.Name}}/{{.ID}}"
+    }
   }
