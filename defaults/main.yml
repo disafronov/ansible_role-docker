@@ -2,6 +2,6 @@ docker_daemon_options: |
   {
     "log-driver": "journald",
     "log-opts": {
-      "tag": "{{.Name}}/{{.ID}}"
+      "tag": "{% raw %}{{.Name}}/{{.ID}}{% endraw %}"
     }
   }
