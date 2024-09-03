@@ -6,15 +6,15 @@
 
 version: 2
 updates:
-  - package-ecosystem: "pip" # See documentation for possible values
-    directory: "/.requirements" # Location of package manifests
+  - package-ecosystem: "pip"
+    directory: "/.requirements"
     schedule:
       interval: "weekly"
     labels:
       - "dependencies"
   - package-ecosystem: "github-actions"
-    directory: "/"
+    directory: "/.github/workflows"
     schedule:
-      interval: "daily"
+      interval: "weekly"
     labels:
       - "dependencies"
