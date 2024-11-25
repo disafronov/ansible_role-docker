@@ -1,9 +1,7 @@
 ---
-
 - name: Perform specific setup for Ubuntu & Debian
   when: ansible_distribution == 'Ubuntu' or ansible_distribution == 'Debian'
   block:
-
     - name: Install Docker dependencies
       ansible.builtin.apt:
         state: present
@@ -17,7 +15,6 @@
 
     - name: Setup repositories
       block:
-
         - name: Create dir for apt keyrings
           ansible.builtin.file:
             path: /etc/apt/keyrings
@@ -29,7 +26,6 @@
         - name: Configure repositories for Ubuntu
           when: ansible_distribution == 'Ubuntu'
           block:
-
             - name: Add Docker's official apt key for Ubuntu
               ansible.builtin.apt_key:
                 url: https://download.docker.com/linux/ubuntu/gpg
@@ -59,7 +55,6 @@
         - name: Configure repositories for Debian
           when: ansible_distribution == 'Debian'
           block:
-
             - name: Add Docker's official apt key for Debian
               ansible.builtin.apt_key:
                 url: https://download.docker.com/linux/debian/gpg
@@ -89,7 +84,6 @@
     - name: Install current Docker version
       when: docker_version is not defined or docker_version | length == 0
       block:
-
         - name: Unpin Docker version in apt
           ansible.builtin.file:
             state: absent
@@ -104,6 +98,7 @@
             pkg:
               - docker-ce
               - docker-ce-cli
+              - docker-buildx-plugin
           notify: Restart Docker
 
     - name: Install specific Docker version
@@ -111,7 +106,6 @@
         - docker_version is defined
         - docker_version | length > 0
       block:
-
         - name: Pin Docker version in apt
           ansible.builtin.copy:
             content: |
@@ -133,13 +127,14 @@
             pkg:
               - docker-ce={{ docker_version }}
               - docker-ce-cli={{ docker_version }}
+              - docker-buildx-plugin
           notify: Restart Docker
 
     - name: Create config dir for docker
       ansible.builtin.file:
         path: /etc/docker
         state: directory
-        mode: '0755'
+        mode: "0755"
         owner: root
         group: root
 
@@ -158,7 +153,6 @@
         - docker_module is defined
         - docker_module
       block:
-
         - name: Install pip3 system package
           ansible.builtin.apt:
             state: present
