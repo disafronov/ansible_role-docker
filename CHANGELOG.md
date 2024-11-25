@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.3.0] - 2024-11-25
+
+### 🚀 Features
+
+- Add docker-buildx-plugin
+
 ## [1.2.2] - 2024-11-12
 
 ### 🚜 Refactor
