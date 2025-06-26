@@ -13,27 +13,6 @@
           - curl
           - software-properties-common
 
-    # Config
-    - name: Create config dir for docker
-      file:
-        path: /etc/docker
-        state: directory
-        mode: '0755'
-        owner: root
-        group: root
-      tags: docker
-
-    - name: Template a file to /etc/docker/daemon.json
-      copy:
-        src: etc/docker/daemon.json
-        dest: /etc/docker/daemon.json
-        owner: root
-        group: root
-        mode: 0644
-        force: no
-      notify: Restart Docker
-      tags: docker
-
     - name: Setup repositories
       block:
         - name: Create dir for apt keyrings
