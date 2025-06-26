@@ -1,6 +1,6 @@
 ---
-- name: Perform specific setup for Ubuntu & Debian
-  when: ansible_distribution == 'Ubuntu' or ansible_distribution == 'Debian'
+- name: Perform specific setup for Ubuntu, Debian and Linux Mint
+  when: ansible_distribution == 'Ubuntu' or ansible_distribution == 'Debian'  or ansible_distribution == 'Linux Mint'
   block:
     - name: Install Docker dependencies
       ansible.builtin.apt:
@@ -12,6 +12,27 @@
           - ca-certificates
           - curl
           - software-properties-common
+
+    # Config
+    - name: Create config dir for docker
+      file:
+        path: /etc/docker
+        state: directory
+        mode: '0755'
+        owner: root
+        group: root
+      tags: docker
+
+    - name: Template a file to /etc/docker/daemon.json
+      copy:
+        src: etc/docker/daemon.json
+        dest: /etc/docker/daemon.json
+        owner: root
+        group: root
+        mode: 0644
+        force: no
+      notify: Restart Docker
+      tags: docker
 
     - name: Setup repositories
       block:
@@ -76,6 +97,50 @@
               ansible.builtin.copy:
                 content: |
                   deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/debian {{ ansible_distribution_release }} stable
+                dest: /etc/apt/sources.list.d/docker.list
+                owner: root
+                group: root
+                mode: "0644"
+
+        - name: Configure repositories for Linux Mint
+          when: ansible_distribution == 'Linux Mint'
+          block:
+            - name: Set Mint release variable
+              ansible.builtin.set_fact:
+                mint_release: "{{ ansible_distribution_version }}"
+
+            - name: Set ubuntu_codename based on Linux Mint release
+              ansible.builtin.set_fact:
+                ubuntu_codename: >-
+                  {% if mint_release in ['22.2', '22.1', '22'] %} noble
+                  {% elif mint_release in ['21.3', '21.2', '21.1', '21'] %} jammy
+                  {% elif mint_release in ['20.3', '20.2', '20.1', '20'] %} focal
+                  {% elif mint_release == '19.3' %} bionic
+                  {% else %} jammy
+                  {% endif %}
+              when: mint_release is defined
+
+            - name: Add Docker's official apt key for Linux Mint
+              ansible.builtin.apt_key:
+                url: https://download.docker.com/linux/ubuntu/gpg
+                state: present
+                keyring: /etc/apt/keyrings/docker.gpg
+              register: add_key
+              ignore_errors: true
+
+            - name: Download Docker's official apt key for Linux Mint (if previous task failed)
+              when: add_key.failed
+              ansible.builtin.get_url:
+                url: https://download.docker.com/linux/ubuntu/gpg
+                dest: /etc/apt/keyrings/docker.gpg
+                owner: root
+                group: root
+                mode: "0644"
+
+            - name: Configure repository for Linux Mint
+              ansible.builtin.copy:
+                content: |
+                  deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu {{ ubuntu_codename }} stable
                 dest: /etc/apt/sources.list.d/docker.list
                 owner: root
                 group: root
